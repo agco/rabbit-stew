@@ -1,0 +1,21 @@
+{
+  "name": "rabbit-stew",
+  "version": "0.0.1",
+  "description": "\"Generic Event Consumer\"",
+  "main": "lib/index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha -R spec",
+    "abc": "docker-compose run rabbitStew npm test"
+  },
+  "author": "Stephen Parker <ShurakaiSoft@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "jackrabbit": "4.0.2"
+  },
+  "devDependencies": {
+    "mocha": "2.3.3"
+  }
+}
