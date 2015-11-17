@@ -112,7 +112,7 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 
 			});
 		});
-		describe.only('The handler API function', function () {
+		describe('The handler API function', function () {
 			var routingKey;
 
 			beforeEach(function () {
