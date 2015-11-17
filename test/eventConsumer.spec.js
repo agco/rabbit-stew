@@ -65,8 +65,6 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 	});
 
 	describe('Exchange Connection', function () {
-		this.timeout(5000);
-
 
 		beforeEach(function connectToExchange() {
 			dataConsumer = new RabbitStew(options);
