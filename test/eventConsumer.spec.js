@@ -112,6 +112,61 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 
 			});
 		});
+		describe.only('the action API', function () {
+			var routingKey;
+
+			beforeEach(function () {
+				routingKey = 'alarms';
+			});
+
+			it('should be able to create a queue with options provided', function (done) {
+				var msg = 'create a queue with a list of routing keys';
+				var actionOptions = {
+					queueName: 'alarms',
+					routingKey: routingKey,
+					func: function handler(data) {
+						data.should.equal(msg);
+						done();
+						return Promise.resolve('OK');
+					}
+				}
+				dataConsumer.action(actionOptions);
+				return publishEvent(exchangeName, 'alarms', msg);
+			});
+
+			it('should be able to create many queues with an array of options', function (done) {
+				var doneCount = 0;
+				var msg = 'create many queues';
+				var actionOptions = [{
+					queueName: 'errorLogs',
+					routingKey: 'logs.errors',
+					func: function handler(data) {
+						data.should.equal(msg);
+						doneCount++;
+						if (doneCount === 2) done();
+						return Promise.resolve('OK');
+					}
+				}, {
+					queueName: 'warningLogs',
+					routingKey: 'logs.warnings',
+					func: function logWarnings(data) {
+						data.should.equal(msg);
+						doneCount++;
+						if (doneCount === 2) done();
+						return Promise.resolve('OK');
+					}
+				} ];
+
+				dataConsumer.action(actionOptions);
+				return Promise.all([
+					publishEvent(exchangeName, 'logs.warnings', msg),
+					publishEvent(exchangeName, 'logs.errors', msg)
+				]);
+			});
+
+			it('should create queues with wildcards in them');
+
+		});
 		describe('The handler API function', function () {
 			var routingKey;
 
@@ -119,13 +174,16 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 				routingKey = 'canAlarms.insert'
 			});
 
+			it('should be able to create multiple queues with multiple handlers');
+			it('should ack/nack based on the result of the promise returned.');
+			it('should derive the routingKey from the first two levels of keys in the options object.');
+			it('should pause and resume processing');
+
 			it('should call the given callback when an event happens', function (done) {
 				var msg = 'hello event handlers';
 				var handlerOptions = {
 					'canAlarms': {
-						key: routingKey,
-						handler: function (data) {
-							console.log('My Event Handler:', data);
+						insert: function (data) {
 							data.should.equal(msg);
 							done();
 							return Promise.resolve('OK');
@@ -134,7 +192,7 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 				};
 
 				dataConsumer.handler(handlerOptions);
-				return publishEvent('change.events', routingKey, msg);
+				return publishEvent(exchangeName, routingKey, msg);
 			});
 		});
 	});
