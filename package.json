@@ -8,14 +8,18 @@
   },
   "scripts": {
     "test-with-docker-compose": "mocha -R spec",
-    "test": "docker-compose run rabbitStew npm run-script test-with-docker-compose"
+    "test": "docker-compose run rabbitStew npm run-script test-with-docker-compose",
+    "posttest": "docker stop $(docker ps -q)"
   },
   "author": "Stephen Parker <ShurakaiSoft@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "jackrabbit": "4.0.2"
+    "jackrabbit": "4.0.2",
+    "lodash": "3.10.1"
   },
   "devDependencies": {
-    "mocha": "2.3.3"
+    "chai": "3.4.1",
+    "mocha": "2.3.3",
+    "should": "7.1.1"
   }
 }

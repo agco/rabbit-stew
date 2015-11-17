@@ -1,16 +1,18 @@
-# Event-Consumer
+# RabbitStew
 
+A Generic Event Consumer for RabbitMQ.
 
 
 ## Tests
 
-The tests are set up with Docker + Docker-Compose,
-so you don't need to install rabbitmq (or even node)
-to run them:
+tests are run in docker containers, thus require docker to be installed on
+development machines.
 
-```
-$ docker-compose run rabbitStew npm test
-```
+Once docker is installed, testing is as easy as
+
+    $ npm test
+
+### Problems with Running Tests
 
 If you get this error:
 
