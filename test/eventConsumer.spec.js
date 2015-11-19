@@ -4,194 +4,127 @@
 
 
 // dependencies
-var publishEvent = require('./publishEvent');
 var should = require('chai').should();
-
+var rabbit = require('jackrabbit');
 
 // module under test
 var RabbitStew = require('../lib/RabbitStew');
 
-
-// variables
-
+var rabbitUrl = process.env.RABBIT_URL;
 
 describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
-	var rabbitUrl;
-	var dataConsumer;
+	var exchange;
 	var options;
-	var exchangeName;
+	var consumers;
 
-	beforeEach(function () {
-		rabbitUrl = process.env.RABBIT_URL;
-		exchangeName = 'change.events'
+	before(function setupExchangeConnection() {
+		exchange = rabbit(rabbitUrl).topic('rabbit.stew.test.exchange');
 		options = {
-			rabbitUrl: rabbitUrl,
-			exchange: exchangeName
+			name: 'testqueue',
+			exclusive: false,
+			durable: false
+		};
+		consumers = {
+			'routingKey': function handler() {}
 		};
 	});
 
-	it('should be a function', function () {
-		RabbitStew.should.be.a.Function;
-	});
-
-
-	describe('Validating `options` argument', function () {
-		it('should throw an error if not given a `rabbitUrl`', function (done) {
-			// Using RabbitStew.should.throw(Error) doesn't appear to allow
-			// calling the function with different parameters
+	describe('The createConsumers API', function () {
+		it('should throw an error if the first argument is not a jackrabbit exchange object', function (done) {
 			try {
-				var stew = new RabbitStew();
-				done('falied to throw error when no RabbitMQ connection URL was provided');
+				RabbitStew.createConsumers();
 			} catch (err) {
-				err.should.match(/RabbitMQ connection URL/);
+				err.should.match(/First argument.*RabbitMQ/);
+			}
+			try {
+				RabbitStew.createConsumers({ fake: 'exchange object'});
+			} catch (err) {
+				err.should.match(/First argument.*RabbitMQ/);
+			}
+			try {
+				RabbitStew.createConsumers(exchange, options, consumers);
 				done();
+			} catch (err) {
+				done('FAILED: Should work with a real jackrabbit excange');
+			}
+		});
+		it('should throw an error if the second argument is not a queue configuration object', function (done) {
+			try {
+				RabbitStew.createConsumers(exchange);
+			} catch (err) {
+				err.should.match(/Second argument/);
+			}
+			try {
+				RabbitStew.createConsumers(exchange, { bogus: 'options object' })
+			} catch (err) {
+				err.should.match(/Second argument/);
+			}
+			try {
+				RabbitStew.createConsumers(exchange, options, consumers);
+				done();
+			} catch (err) {
+				done('FAILED: Should work with a valid options object');
+			}
+		});
+		it('should throw an error if the third argument is not an object defining at least one routingKey/function handler', function (done) {
+			try {
+				RabbitStew.createConsumers(exchange, options);
+			} catch (err) {
+				err.should.match(/Third argument.*routingKey.*consumer/);
+			}
+			try {
+				RabbitStew.createConsumers(exchange, options, 'bogus routingKey and function handler');
+			} catch (err) {
+				err.should.match(/Third argument.*routingKey.*consumer/);
+			}
+			try {
+				RabbitStew.createConsumers(exchange, options, consumers);
+				done();
+			} catch (err) {
+				done('FAILED: Should work with a valid consumers object');
 			}
 		});
 
-		it('should connect to the exchange given by `options.rabbitUrl`', function () {
-			var rabbitConnection;
+		it('should return a queue object');
 
-			rabbitConnection = new RabbitStew(options);
-			rabbitConnection.should.have.property('handler').and.be.a.Function;
-
-			rabbitConnection.close();
-
-			// pass an invalid url via the options object and catch the error
-			// except, jackrabbit doesn't throw an error wit a bad url.
-			// options.rabbitUrl = 'causeAnErrorWithInvalidUrl';
-			// rabbitConnection = rabbitStew.queueConnector(options).should.throw();
+		// TODO: it would be nice to destroy queues once created for cleanup but jackrabbit doesn't provide this.
+		it.skip('should return a destroyable queue object', function () {
+			var queue = RabbitStew.createConsumers(exchange, options, consumers);
+			queue.should.be.an.Object;
+			queue.destroy.should.be.a.Function;
 		});
-		it('should connect to the exchange ')
+
+		it('should work with a simple happy path', function (done) {
+			var payload = 'test payload';
+			var consumersQueue;
+
+			consumers = {
+				'simple.test': function (data) {
+					data.should.equal(payload);
+					done();
+					return Promise.resolve('ack');
+				}
+			};
+			consumersQueue = RabbitStew.createConsumers(exchange, options, consumers);
+
+			return exchange.publish(payload, { key: 'simple.test'});
+		});
+		it('should pass payloads with different routing keys to different consumers.')
+		it('should not retry payloads with invalid routing keys')
 	});
 
-	describe('Exchange Connection', function () {
-
-		beforeEach(function connectToExchange() {
-			dataConsumer = new RabbitStew(options);
+	describe('the exchange API', function () {
+		it('should be a function', function () {
+			RabbitStew.exchange.should.be.a.Function;
 		});
+		it('should return a jackrabbit exchange object', function () {
+			var exchange = RabbitStew.exchange(rabbitUrl, 'rabbit.stew.test.exchange');
 
-		afterEach(function disconnectToExchange() {
-			dataConsumer && dataConsumer.close();
-		});
-
-		it('should return an API object');
-
-		describe('The getInternals API', function () {
-
-			it('should exist as a function', function () {
-				dataConsumer.getInternals.should.be.a.Function;
-			})
-
-			describe('the internals object', function () {
-				var internals;
-
-				before(function () {
-					internals = dataConsumer.getInternals();
-				});
-
-				it('should return an `internals` object', function () {
-					internals.should.be.an.Object;
-				});
-
-				it('should contain the underlying jackrabbit object', function () {
-					internals.should.have.property('rabbit').and.be.an.Object;
-				});
-
-				it('should contain the underlying exchange object', function () {
-					internals.should.have.property('exchange').and.be.an.Object;
-				});
-
-				it('should contain the configuration object', function () {
-					internals.should.have.property('config').and.be.an.Object;
-					internals.config.rabbitUrl.should.be.a.String;
-				});
-
-				it('should contain an array of queues')
-
-			});
-		});
-		describe('the action API', function () {
-			var routingKey;
-
-			beforeEach(function () {
-				routingKey = 'alarms';
-			});
-
-			it('should be able to create a queue with options provided', function (done) {
-				var msg = 'create a queue with a list of routing keys';
-				var actionOptions = {
-					queueName: 'alarms',
-					routingKey: routingKey,
-					func: function handler(data) {
-						data.should.equal(msg);
-						done();
-						return Promise.resolve('OK');
-					}
-				}
-				dataConsumer.action(actionOptions);
-				return publishEvent(exchangeName, 'alarms', msg);
-			});
-
-			it('should be able to create many queues with an array of options', function (done) {
-				var doneCount = 0;
-				var msg = 'create many queues';
-				var actionOptions = [{
-					queueName: 'errorLogs',
-					routingKey: 'logs.errors',
-					func: function handler(data) {
-						data.should.equal(msg);
-						doneCount++;
-						if (doneCount === 2) done();
-						return Promise.resolve('OK');
-					}
-				}, {
-					queueName: 'warningLogs',
-					routingKey: 'logs.warnings',
-					func: function logWarnings(data) {
-						data.should.equal(msg);
-						doneCount++;
-						if (doneCount === 2) done();
-						return Promise.resolve('OK');
-					}
-				} ];
-
-				dataConsumer.action(actionOptions);
-				return Promise.all([
-					publishEvent(exchangeName, 'logs.warnings', msg),
-					publishEvent(exchangeName, 'logs.errors', msg)
-				]);
-			});
-
-			it('should create queues with wildcards in them');
-
-		});
-		describe('The handler API function', function () {
-			var routingKey;
-
-			beforeEach(function () {
-				routingKey = 'canAlarms.insert'
-			});
-
-			it('should be able to create multiple queues with multiple handlers');
-			it('should ack/nack based on the result of the promise returned.');
-			it('should derive the routingKey from the first two levels of keys in the options object.');
-			it('should pause and resume processing');
-
-			it('should call the given callback when an event happens', function (done) {
-				var msg = 'hello event handlers';
-				var handlerOptions = {
-					'canAlarms': {
-						insert: function (data) {
-							data.should.equal(msg);
-							done();
-							return Promise.resolve('OK');
-						}
-					}
-				};
-
-				dataConsumer.handler(handlerOptions);
-				return publishEvent(exchangeName, routingKey, msg);
-			});
+			exchange.should.have.property('type').and.equal('topic');
+			exchange.should.have.property('options').and.be.an.Object;
+			exchange.should.have.property('queue').and.be.a.Function;
+			exchange.should.have.property('connect').and.be.a.Function;
+			exchange.should.have.property('publish').and.be.a.Function;
 		});
 	});
 
