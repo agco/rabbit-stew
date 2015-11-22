@@ -34,7 +34,7 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 		rabbit.on('close', done);
 	})
 
-	describe.only('The queue function', function () {
+	describe('The queue function', function () {
 		var queue;
 		var options;
 
@@ -105,7 +105,7 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 				});
 			});
 
-			it('should create a queue with multiple consumers', function (done) {
+			it.skip('should create a queue with multiple consumers', function (done) {
 				var payloadA = 'payload for consumer.A';
 				var payloadB = 'payload for consumer.B';
 				var receivedA = false;
@@ -132,10 +132,104 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 					exchange.publish(payloadB, { key: 'consumer.B' });
 				});
 			});
-			it('should create a consumer for all routeingKeys given');
-			it('should pause the queue');
-			it('should resume the queue')
+			it('should create a single consumer for multiple routingKeys', function () {
+				var payloadA = 'testing one consumer';
+				var payloadB = 'can get messages from many routingKeys';
+				var gotA = false;
+				var gotB = false;
+
+				options.name = 'test.one.consumer.many.keys';
+				options.keys = [ 'one.consumer', 'many.keys' ];
+				queue = RabbitStew.queue(exchange, options)
+				.consume(function justOneConsumer(data) {
+					gotA = (data === payloadA);
+					gotB = (data === payloadB);
+					if (gotA && gotB) return done();
+					return Promise.resolve('ack');
+				})
+				.then(function publishSomeMessages() {
+					exchange.publish(payloadA, { key: 'one.consumer' });
+					exchange.publish(payloadB, { key: 'many.keys' });
+				});
+			});
 		});
+		describe('The queue.pause function', function () {
+			it('should exist as a property of queue and be a function', function () {
+				var queue = RabbitStew.queue(exchange, options);
+
+				queue.should.have.property('pause').and.be.a.Function;
+			});
+			it('should reject the promise when the queue has not yet been instantiated', function () {
+				var queue = RabbitStew.queue(exchange, options);
+
+				return queue.pause()
+				.then(function () {
+					throw new Error('ERROR: should reject pause request');
+				})
+				.catch(function (err) {
+					err.should.match(/ERROR:.*not.*instantiated/);
+				});
+			});
+			it('should return the queue', function () {
+				var queue;
+
+				options.name = 'test.pause.returns.queue';
+				queue = RabbitStew.queue(exchange, options);
+
+				return queue.consume({
+					'dummyRoutingKey': function dummyHandler(data) {
+						return Promise.reslove('ack');
+					}
+				})
+				.then(function pauseQueue(queue) {
+					return queue.pause();
+				})
+				.then(function validateQueue(queue) {
+					should.exist(queue.rabbitQueue.options.name);
+					queue.rabbitQueue.options.name.should.equal(options.name);
+				});
+			});
+			it('should pause all queue consumers');
+		});
+		describe('The queue.resume function', function () {
+			it('should exist as a property of queue and be a function', function () {
+				var queue = RabbitStew.queue(exchange, options);
+
+				queue.should.have.property('resume').and.be.a.Function;
+			});
+			it('should reject the promise when the queue has not yet been instantiated', function () {
+				var queue = RabbitStew.queue(exchange, options);
+
+				return queue.resume()
+				.then(function shouldNotBeCalled(queue) {
+					throw new Error('ERROR: should have rejected the resume request');
+				})
+				.catch(function validateError(err) {
+					err.should.match(/ERROR.*not.*instantiated/);
+				});
+			})
+			it('should return the queue', function () {
+				var queue;
+
+				options.name = 'test.resume.returns.queue'
+				queue = RabbitStew.queue(exchange, options);
+
+				return queue.consume({
+					'dummyRoutingKey': function dummyHandler(data) {
+						return Promise.resolve('ack');
+					}
+				})
+				.then(function resumeQueue(queue) {
+					return queue.resume();
+				})
+				.then(function validateQueue(queue) {
+					should.exist(queue.rabbitQueue.options.name);
+					queue.rabbitQueue.options.name.should.equal(options.name);
+				});
+			});
+			it('should allow all queue consumers to resume processing the queue');
+		})
+
 
 	});
 
