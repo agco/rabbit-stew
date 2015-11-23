@@ -11,12 +11,16 @@
     "pretest": "docker stop rabbitstew_rabbit_1",
     "test": "docker-compose run rabbitStew npm run-script test-with-docker-compose"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agco/rabbit-stew.git"
+  },
   "author": "Stephen Parker <ShurakaiSoft@gmail.com>",
   "license": "MIT",
   "dependencies": {
     "bluebird": "3.0.5",
     "bunny-paws": "0.0.2",
-    "jackrabbit": "4.0.2",
+    "jackrabbit": "git+https://github.com/blabno/jackrabbit.git#66e4c59",
     "lodash": "3.10.1"
   },
   "devDependencies": {

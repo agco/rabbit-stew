@@ -25,13 +25,18 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 			exclusive: false,
 			durable: false
 		};
-		rabbit.on('connected', done)
+		rabbit.on('connected', function () {
+			done();
+		});
 	});
 
 	after(function closeExchangeConnection(done) {
+		// TODO: we should destroy the exchange here.
 		rabbit.close();
-		rabbit.on('close', done);
-		// TODO: we need to destroy the exchange here.
+		rabbit.on('close', function (conn) {
+			// ignore conn
+			done();
+		});
 	})
 
 	describe('The queue function', function () {
@@ -192,7 +197,7 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 					queue.rabbitQueue.options.name.should.equal(options.name);
 				});
 			});
-			it.skip('should pause all queue consumers', function (done) {
+			it('should pause all queue consumers', function (done) {
 				var queue;
 				var callCount = 0;
 				var routingKey = 'test.queue.can.pause'
@@ -261,7 +266,7 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 					queue.rabbitQueue.options.name.should.equal(options.name);
 				});
 			});
-			it.skip('should allow all queue consumers to resume processing the queue', function (done) {
+			it('should allow all queue consumers to resume processing the queue', function (done) {
 				var queue;
 				var routingKey = 'test.queue.can.resume'
 				var paused;
