@@ -2,7 +2,6 @@
 // create a queue to connect to.
 // See: github hunterloftis/jackrabbit for how to do this.
 
-
 // dependencies
 var should = require('chai').should();
 var jackrabbit = require('jackrabbit');
@@ -32,6 +31,7 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 	after(function closeExchangeConnection(done) {
 		rabbit.close();
 		rabbit.on('close', done);
+		// TODO: we need to destroy the exchange here.
 	})
 
 	describe('The queue function', function () {
@@ -105,7 +105,7 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 				});
 			});
 
-			it.skip('should create a queue with multiple consumers', function (done) {
+			it('should create a queue with multiple consumers', function (done) {
 				var payloadA = 'payload for consumer.A';
 				var payloadB = 'payload for consumer.B';
 				var receivedA = false;
@@ -114,13 +114,13 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 				options.name = 'test.multiple.consumers';
 				queue = RabbitStew.queue(exchange, options)
 				.consume({
-					'consumer.A': function (data) {
+					'consumerA': function (data) {
 						data.should.equal(payloadA);
 						receivedA = true;
 						if (receivedA && receivedB) done();
 						return Promise.resolve('ack');
 					},
-					'consumer.B': function (data) {
+					'consumerB': function (data) {
 						data.should.equal(payloadB);
 						receivedB = true;
 						if (receivedA && receivedB) done();
@@ -128,9 +128,12 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 					}
 				})
 				.then(function publishTwoMessages(queue) {
-					exchange.publish(payloadA, { key: 'consumer.A' });
-					exchange.publish(payloadB, { key: 'consumer.B' });
-				});
+					setTimeout(function waitForQueueToBindRoutingKeys() {
+						// There is no event, promise or callback to tell us when this happens.
+						exchange.publish(payloadA, { key: 'consumerA' });
+						exchange.publish(payloadB, { key: 'consumerB' });
+					}, 50);
+				})
 			});
 			it('should create a single consumer for multiple routingKeys', function () {
 				var payloadA = 'testing one consumer';
@@ -173,7 +176,7 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 			it('should return the queue', function () {
 				var queue;
 
-				options.name = 'test.pause.returns.queue';
+				options.name = 'TestPauseReturnsQueue';
 				queue = RabbitStew.queue(exchange, options);
 
 				return queue.consume({
@@ -189,7 +192,38 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 					queue.rabbitQueue.options.name.should.equal(options.name);
 				});
 			});
-			it('should pause all queue consumers');
+			it.skip('should pause all queue consumers', function (done) {
+				var queue;
+				var callCount = 0;
+				var routingKey = 'test.queue.can.pause'
+
+				options.name = 'TestQueuePauseAbility';
+				options.keys = [ routingKey ];
+				queue = RabbitStew.queue(exchange, options);
+
+				setTimeout(function waitForMessagesOnPausedQueue() {
+					callCount.should.equal(1);
+					done();
+				}, 1500);
+
+				return queue.consume(function (data) {
+					callCount++;
+					if (data === 'test message while unpaused') {
+						return queue.pause()
+						.then(function () {
+							exchange.publish('test message while paused', { key: routingKey });
+						});
+					}
+					if (data === 'test message while paused') {
+						done('FAILED: queue paused but still received message');
+					}
+					return Promise.resolve('ack');
+				})
+				.then(function sendMessageWhileUnpaused(queue) {
+					exchange.publish('test message while unpaused', { key: routingKey });
+				});
+
+			});
 		});
 		describe('The queue.resume function', function () {
 			it('should exist as a property of queue and be a function', function () {
@@ -227,10 +261,35 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 					queue.rabbitQueue.options.name.should.equal(options.name);
 				});
 			});
-			it('should allow all queue consumers to resume processing the queue');
-		})
+			it.skip('should allow all queue consumers to resume processing the queue', function (done) {
+				var queue;
+				var routingKey = 'test.queue.can.resume'
+				var paused;
 
+				options.name = 'TestQueueResumeAbility';
+				options.keys = [ routingKey ];
+				queue = RabbitStew.queue(exchange, options);
 
+				setTimeout(function unpauseQueue() {
+					queue.resume()
+					.then(function () {
+						paused = false;
+					})
+				}, 1500);
+
+				return queue.consume(function (data) {
+					paused.should.equal(false);
+					done();
+					return Promise.resolve('ack');
+				})
+				.then(function pauseQueue(queue) {
+					return queue.pause();
+				})
+				.then(function sendMessageWhilePaused() {
+					paused = true;
+					exchange.publish('test message while unpaused', { key: routingKey });
+				});
+			});
+		});
 	});
-
 });
