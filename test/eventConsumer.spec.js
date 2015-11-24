@@ -33,8 +33,7 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 	after(function closeExchangeConnection(done) {
 		// TODO: we should destroy the exchange here.
 		rabbit.close();
-		rabbit.on('close', function (conn) {
-			// ignore conn
+		rabbit.on('close', function () {
 			done();
 		});
 	})
@@ -170,6 +169,7 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 			it('should reject the promise when the queue has not yet been instantiated', function () {
 				var queue = RabbitStew.queue(exchange, options);
 
+				this.timeout(3000);
 				return queue.pause()
 				.then(function () {
 					throw new Error('ERROR: should reject pause request');
@@ -181,6 +181,7 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 			it('should return the queue', function () {
 				var queue;
 
+				this.timeout(3000);
 				options.name = 'TestPauseReturnsQueue';
 				queue = RabbitStew.queue(exchange, options);
 
@@ -200,22 +201,26 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 			it('should pause all queue consumers', function (done) {
 				var queue;
 				var callCount = 0;
+				var sentCount = 0;
 				var routingKey = 'test.queue.can.pause'
 
+				this.timeout(5000);
 				options.name = 'TestQueuePauseAbility';
 				options.keys = [ routingKey ];
 				queue = RabbitStew.queue(exchange, options);
 
 				setTimeout(function waitForMessagesOnPausedQueue() {
 					callCount.should.equal(1);
+					sentCount.should.equal(2);
 					done();
-				}, 1500);
+				}, 4000);
 
 				return queue.consume(function (data) {
 					callCount++;
 					if (data === 'test message while unpaused') {
 						return queue.pause()
 						.then(function () {
+							sentCount++;
 							exchange.publish('test message while paused', { key: routingKey });
 						});
 					}
@@ -225,6 +230,7 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 					return Promise.resolve('ack');
 				})
 				.then(function sendMessageWhileUnpaused(queue) {
+					sentCount++;
 					exchange.publish('test message while unpaused', { key: routingKey });
 				});
 
@@ -239,6 +245,7 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 			it('should reject the promise when the queue has not yet been instantiated', function () {
 				var queue = RabbitStew.queue(exchange, options);
 
+				this.timeout(3000);
 				return queue.resume()
 				.then(function shouldNotBeCalled(queue) {
 					throw new Error('ERROR: should have rejected the resume request');
@@ -250,6 +257,8 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 			it('should return the queue', function () {
 				var queue;
 
+				this.timeout(3000);
+				this.tiomeout
 				options.name = 'test.resume.returns.queue'
 				queue = RabbitStew.queue(exchange, options);
 
@@ -271,16 +280,15 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 				var routingKey = 'test.queue.can.resume'
 				var paused;
 
+				this.timeout(7000);
 				options.name = 'TestQueueResumeAbility';
 				options.keys = [ routingKey ];
 				queue = RabbitStew.queue(exchange, options);
 
 				setTimeout(function unpauseQueue() {
-					queue.resume()
-					.then(function () {
-						paused = false;
-					})
-				}, 1500);
+					paused  = false;
+					queue.resume();
+				}, 4000);
 
 				return queue.consume(function (data) {
 					paused.should.equal(false);

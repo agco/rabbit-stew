@@ -8,4 +8,8 @@ rabbitStew:
   environment:
     RABBIT_URL: 'amqp://rabbit'
 rabbit:
-  image: rabbitmq
+  image: andrewkeig/rabbitmq-mqtt-enabled
+  ports:
+   - "15672:15672"
+   - "5672:5672"
+   - "1883:1883"
