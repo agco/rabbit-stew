@@ -31,12 +31,13 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 	});
 
 	after(function closeExchangeConnection(done) {
-		// TODO: we should destroy the exchange here.
+		// TODO: we should destroy the exchange here. However JackRabbit doesn't
+		// support that functionality. May need to use AmqpLib or something else.
 		rabbit.close();
 		rabbit.on('close', function () {
 			done();
 		});
-	})
+	});
 
 	describe('The queue function', function () {
 		var queue;
@@ -132,11 +133,8 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 					}
 				})
 				.then(function publishTwoMessages(queue) {
-					setTimeout(function waitForQueueToBindRoutingKeys() {
-						// There is no event, promise or callback to tell us when this happens.
-						exchange.publish(payloadA, { key: 'consumerA' });
-						exchange.publish(payloadB, { key: 'consumerB' });
-					}, 50);
+					exchange.publish(payloadA, { key: 'consumerA' });
+					exchange.publish(payloadB, { key: 'consumerB' });
 				})
 			});
 			it('should create a single consumer for multiple routingKeys', function () {
