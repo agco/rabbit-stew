@@ -8,7 +8,7 @@ A Generic Event Consumer for RabbitMQ.
 tests are run in docker containers, thus require docker to be installed on
 development machines.
 
-Once docker is installed, testing is as easy as
+Once docker is installed and running, testing is as easy as
 
     $ npm test
 
@@ -23,4 +23,3 @@ And running `docker-machine start default` doesn't help try
     eval "$(docker-machine env default)"
 
 It might help with the missing configuration environment
-
