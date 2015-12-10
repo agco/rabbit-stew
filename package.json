@@ -1,6 +1,6 @@
 {
   "name": "rabbit-stew",
-  "version": "0.2.1",
+  "version": "1.0.0",
   "description": "\"Generic Event Consumer\"",
   "main": "lib/index.js",
   "directories": {
@@ -19,12 +19,12 @@
   "license": "MIT",
   "dependencies": {
     "bluebird": "3.0.5",
-    "bunny-paws": "0.0.2",
-    "jackrabbit": "git+https://github.com/blabno/jackrabbit.git#66e4c59",
     "lodash": "3.10.1"
   },
   "devDependencies": {
+    "bunny-paws": "0.0.2",
     "chai": "3.4.1",
+    "jackrabbit": "git+https://github.com/blabno/jackrabbit.git#66e4c59",
     "mocha": "2.3.3",
     "should": "7.1.1"
   }
