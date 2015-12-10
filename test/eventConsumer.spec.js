@@ -4,30 +4,38 @@
 
 // dependencies
 var should = require('chai').should();
+var BunnyPaws = require('bunny-paws');
 var jackrabbit = require('jackrabbit');
 var Promise = require('bluebird');
 
 // module under test
 var RabbitStew = require('../lib/RabbitStew');
 
+// constants
 var rabbitUrl = process.env.RABBIT_URL;
 
 describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 	var rabbit;
 	var exchange;
 	var options;
+	var bunnyPawsInstance;
 
 	before(function setupExchangeConnection(done) {
 		rabbit = jackrabbit(rabbitUrl);
 		exchange = rabbit.topic('rabbit.stew.test.exchange');
-		options = {
-			name: 'testqueue',
-			exclusive: false,
-			durable: false
-		};
+		bunnyPawsInstance = BunnyPaws.newInstance(rabbitUrl);
 		rabbit.on('connected', function () {
 			done();
 		});
+	});
+
+	beforeEach(function setupDefaultQueueOptions() {
+		options = {
+			bunnyPaws: bunnyPawsInstance,
+			durable: false,
+			exclusive: false
+		};
+
 	});
 
 	after(function closeExchangeConnection(done) {
@@ -41,14 +49,10 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 
 	describe('The queue function', function () {
 		var queue;
-		var options;
 
-		beforeEach(function () {
-			options = {
-				durable: false,
-				exclusive: false,
-				rabbitUrl: rabbitUrl
-			}
+		it('should throw an error if options doesn\'t contain a bunnyPaws property', function () {
+			delete options.bunnyPaws;
+			RabbitStew.queue.bind(null, exchange, options).should.throw(/.*No.*BunnyPaws.*/);
 		});
 
 		it('should return a promise with a queue object', function () {
@@ -106,7 +110,7 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 					}
 				})
 				.then(function publishTestMessage() {
-						exchange.publish(payload, { key: 'consume.function.test' });
+					exchange.publish(payload, { key: 'consume.function.test' });
 				});
 			});
 
