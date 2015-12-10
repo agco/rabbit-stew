@@ -8,7 +8,6 @@
   },
   "scripts": {
     "test-with-docker-compose": "mocha -R spec",
-    "pretest": "docker stop rabbitstew_rabbit_1",
     "test": "docker-compose run rabbitStew npm run-script test-with-docker-compose"
   },
   "repository": {

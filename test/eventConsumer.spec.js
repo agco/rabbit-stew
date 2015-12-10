@@ -33,14 +33,17 @@ describe('RabbitStew (RabbitMQ generic data consumer) Module', function () {
 		options = {
 			bunnyPaws: bunnyPawsInstance,
 			durable: false,
-			exclusive: false
+			exclusive: false,
+			messageTtl: 5000
 		};
 
 	});
 
 	after(function closeExchangeConnection(done) {
-		// TODO: we should destroy the exchange here. However JackRabbit doesn't
-		// support that functionality. May need to use AmqpLib or something else.
+		// TODO: Fix RabbitMQ resource leak. Bunny-paws is abandoning
+		// management/control queues at the end of testing.
+		// For now these can be deleted manually through the RabbitMQ admin
+		// portal at http://<docker-machine-ip>:15672/
 		rabbit.close();
 		rabbit.on('close', function () {
 			done();
